@@ -1,0 +1,11 @@
+chains/
+node-addresses.csv
+burst-*/
+*.csv
+*.json
+gossip-edges.csv
+gossip.dot
+gossip.png
+block-times*.csv
+.DS_Store
+Thumbs.db

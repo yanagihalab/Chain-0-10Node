@@ -1,0 +1,541 @@
+services:
+  node1:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-1
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node1:/root/.simapp
+    ports:
+      - "37657:26657"
+      - "13717:1317"
+      - "9490:9090"
+      - "36656:26656"
+
+  node2:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-2
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node2:/root/.simapp
+    ports:
+      - "37658:26657"
+      - "13718:1317"
+      - "9491:9090"
+      - "36657:26656"
+
+  node3:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-3
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node3:/root/.simapp
+    ports:
+      - "37659:26657"
+      - "13719:1317"
+      - "9492:9090"
+      - "36658:26656"
+
+  node4:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-4
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node4:/root/.simapp
+    ports:
+      - "37660:26657"
+      - "13720:1317"
+      - "9493:9090"
+      - "36659:26656"
+
+  node5:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-5
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node5:/root/.simapp
+    ports:
+      - "37661:26657"
+      - "13721:1317"
+      - "9494:9090"
+      - "36660:26656"
+
+  node6:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-6
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node6:/root/.simapp
+    ports:
+      - "37662:26657"
+      - "13722:1317"
+      - "9495:9090"
+      - "36661:26656"
+
+  node7:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-7
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node7:/root/.simapp
+    ports:
+      - "37663:26657"
+      - "13723:1317"
+      - "9496:9090"
+      - "36662:26656"
+
+  node8:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-8
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node8:/root/.simapp
+    ports:
+      - "37664:26657"
+      - "13724:1317"
+      - "9497:9090"
+      - "36663:26656"
+
+  node9:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-9
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node9:/root/.simapp
+    ports:
+      - "37665:26657"
+      - "13725:1317"
+      - "9498:9090"
+      - "36664:26656"
+
+  node10:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-10
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node10:/root/.simapp
+    ports:
+      - "37666:26657"
+      - "13726:1317"
+      - "9499:9090"
+      - "36665:26656"
+
+  node11:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-11
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node11:/root/.simapp
+    ports:
+      - "37667:26657"
+      - "13727:1317"
+      - "9500:9090"
+      - "36666:26656"
+
+  node12:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-12
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node12:/root/.simapp
+    ports:
+      - "37668:26657"
+      - "13728:1317"
+      - "9501:9090"
+      - "36667:26656"
+
+  node13:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-13
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node13:/root/.simapp
+    ports:
+      - "37669:26657"
+      - "13729:1317"
+      - "9502:9090"
+      - "36668:26656"
+
+  node14:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-14
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node14:/root/.simapp
+    ports:
+      - "37670:26657"
+      - "13730:1317"
+      - "9503:9090"
+      - "36669:26656"
+
+  node15:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-15
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node15:/root/.simapp
+    ports:
+      - "37671:26657"
+      - "13731:1317"
+      - "9504:9090"
+      - "36670:26656"
+
+  node16:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-16
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node16:/root/.simapp
+    ports:
+      - "37672:26657"
+      - "13732:1317"
+      - "9505:9090"
+      - "36671:26656"
+
+  node17:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-17
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node17:/root/.simapp
+    ports:
+      - "37673:26657"
+      - "13733:1317"
+      - "9506:9090"
+      - "36672:26656"
+
+  node18:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-18
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node18:/root/.simapp
+    ports:
+      - "37674:26657"
+      - "13734:1317"
+      - "9507:9090"
+      - "36673:26656"
+
+  node19:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-19
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node19:/root/.simapp
+    ports:
+      - "37675:26657"
+      - "13735:1317"
+      - "9508:9090"
+      - "36674:26656"
+
+  node20:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-20
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node20:/root/.simapp
+    ports:
+      - "37676:26657"
+      - "13736:1317"
+      - "9509:9090"
+      - "36675:26656"
+
+  node21:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-21
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node21:/root/.simapp
+    ports:
+      - "37677:26657"
+      - "13737:1317"
+      - "9510:9090"
+      - "36676:26656"
+
+  node22:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-22
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node22:/root/.simapp
+    ports:
+      - "37678:26657"
+      - "13738:1317"
+      - "9511:9090"
+      - "36677:26656"
+
+  node23:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-23
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node23:/root/.simapp
+    ports:
+      - "37679:26657"
+      - "13739:1317"
+      - "9512:9090"
+      - "36678:26656"
+
+  node24:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-24
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node24:/root/.simapp
+    ports:
+      - "37680:26657"
+      - "13740:1317"
+      - "9513:9090"
+      - "36679:26656"
+
+  node25:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-25
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node25:/root/.simapp
+    ports:
+      - "37681:26657"
+      - "13741:1317"
+      - "9514:9090"
+      - "36680:26656"
+
+  node26:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-26
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node26:/root/.simapp
+    ports:
+      - "37682:26657"
+      - "13742:1317"
+      - "9515:9090"
+      - "36681:26656"
+
+  node27:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-27
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node27:/root/.simapp
+    ports:
+      - "37683:26657"
+      - "13743:1317"
+      - "9516:9090"
+      - "36682:26656"
+
+  node28:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-28
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node28:/root/.simapp
+    ports:
+      - "37684:26657"
+      - "13744:1317"
+      - "9517:9090"
+      - "36683:26656"
+
+  node29:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-29
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node29:/root/.simapp
+    ports:
+      - "37685:26657"
+      - "13745:1317"
+      - "9518:9090"
+      - "36684:26656"
+
+  node30:
+    image: ghcr.io/cosmos/ibc-go-simd:release-v10.4.x
+    container_name: chain-0-node-30
+    command: >
+      start
+      --home /root/.simapp
+      --rpc.laddr tcp://0.0.0.0:26657
+      --grpc.address 0.0.0.0:9090
+      --api.enable=true
+      --p2p.laddr tcp://0.0.0.0:26656
+    volumes:
+      - ./chains/node30:/root/.simapp
+    ports:
+      - "37686:26657"
+      - "13746:1317"
+      - "9519:9090"
+      - "36685:26656"
+
