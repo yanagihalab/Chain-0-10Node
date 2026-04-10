@@ -1,41 +1,98 @@
-# Chain-0 8-Node Tx Processing Local Test Environment
+# chain-0 10-node local consensus test environment
 
 ## 1. 概要
 
-本構成は、Cosmos SDK / CometBFT ベースの **8 ノード / 8 validator** 構成の `chain-0` を Docker 上で起動し、分散合意を含む Tx 処理実験を行うためのローカル実験環境です。
+本リポジトリは、Cosmos SDK / CometBFT ベースの
+単一チェーン `chain-0` を
+**10ノード・10 validator** 構成で
+Docker 上に構築し、
+ローカル環境でコンセンサス挙動、
+Tx 処理、
+gossip protocol、
+block time などを観測するための
+実験環境である。
 
-単一ノード版と異なり、本版では次を観測できます。
-
-- 8 validator による block 生成
-- ノード数増加時の Tx inclusion 挙動
-- burst load 時の処理遅延
-- block time と validator 集合の影響
-- validator 一覧 / voting power / proposer priority
-
-本パッケージでは、**node1 を送信・観測の基準ノード**として使います。
+本環境は、もともとの単一ノード版および
+多ノード試行版をもとに整理したものであり、
+最終的に **10 ノード構成で安定して block が進行し、
+Tx 送信および gossip の確認まで行える**
+構成としてまとめている。
 
 ---
 
-## 2. ディレクトリ構成
+## 2. 目的
+
+本環境の主な目的は以下である。
+
+- 10 validator 構成でのローカルコンセンサス実験
+- proposal / commit の継続観測
+- peer 接続と gossip protocol の確認
+- 単発 Tx および burst Tx の処理確認
+- block time の観測
+- consensus-related 設定変更時の安定性比較
+
+---
+
+## 3. 構成
+
+### 3.1 チェーン
+
+- chain ID: `chain-0`
+
+### 3.2 ノード数
+
+- 10 nodes
+- 10 validators
+
+### 3.3 コンテナ名
+
+- `chain-0-node-1`
+- `chain-0-node-2`
+- ...
+- `chain-0-node-10`
+
+### 3.4 基本ポート割当
+
+各ノードのホストポートは以下の規則で割り当てる。
+
+- RPC: `37656 + node番号`
+- REST API: `13716 + node番号`
+- gRPC: `9489 + node番号`
+- P2P: `36655 + node番号`
+
+例:
+
+- node1
+  - RPC: `37657`
+  - API: `13717`
+  - gRPC: `9490`
+  - P2P: `36656`
+
+- node10
+  - RPC: `37666`
+  - API: `13726`
+  - gRPC: `9499`
+  - P2P: `36665`
+
+---
+
+## 4. ディレクトリ構成
 
 ```text
-chain-0-8node-package/
+chain-0-10node-package/
 ├─ README.md
 ├─ docker-compose.yml
-├─ node-addresses.csv            # init後に生成
+├─ .gitignore
 ├─ chains/
 │  ├─ node1/
 │  ├─ node2/
-│  ├─ node3/
-│  ├─ node4/
-│  ├─ node5/
-│  ├─ node6/
-│  ├─ node7/
-│  └─ node8/
+│  ├─ ...
+│  └─ node10/
+├─ node-addresses.csv
 └─ scripts/
-   ├─ init-8node.sh
-   ├─ start-8node.sh
-   ├─ stop-8node.sh
+   ├─ init-10node.sh
+   ├─ start-10node.sh
+   ├─ stop-10node.sh
    ├─ query-status-all.sh
    ├─ query-validators.sh
    ├─ query-balances.sh
@@ -43,107 +100,138 @@ chain-0-8node-package/
    ├─ wait-tx.sh
    ├─ burst-bank-load.sh
    ├─ audit-tx-inclusion.sh
+   ├─ summarize-load-result.sh
    ├─ export-block-times.sh
-   └─ summarize-load-result.sh
+   └─ gen-docker-compose-10.sh
+````
+
+---
+
+## 5. 事前要件
+
+* Docker
+* Docker Compose
+* `jq`
+* `curl`
+* `python3`
+
+確認例:
+
+```bash
+sudo docker --version
+sudo docker compose version
+jq --version
+curl --version
+python3 --version
 ```
 
 ---
 
-## 3. ノード名とポート
+## 6. 初期化
 
-各ノードは共通 chain-id `chain-0` に属します。
-
-| Node | Container | RPC | API | gRPC | P2P |
-|---|---|---:|---:|---:|---:|
-| node1 | `chain-0-node-1` | 37657 | 13717 | 9490 | 36656 |
-| node2 | `chain-0-node-2` | 37658 | 13718 | 9491 | 36657 |
-| node3 | `chain-0-node-3` | 37659 | 13719 | 9492 | 36658 |
-| node4 | `chain-0-node-4` | 37660 | 13720 | 9493 | 36659 |
-| node5 | `chain-0-node-5` | 37661 | 13721 | 9494 | 36660 |
-| node6 | `chain-0-node-6` | 37662 | 13722 | 9495 | 36661 |
-| node7 | `chain-0-node-7` | 37663 | 13723 | 9496 | 36662 |
-| node8 | `chain-0-node-8` | 37664 | 13724 | 9497 | 36663 |
-
----
-
-## 4. 前提条件
-
-- Docker / Docker Compose が使えること
-- `sudo docker ...` を実行できること
-- ホスト側で `jq`, `curl`, `python3` が使えること
-- `ghcr.io/cosmos/ibc-go-simd:release-v10.4.x` を pull できること
-
----
-
-## 5. 初期化
+### 6.1 実行権限付与
 
 ```bash
 chmod +x scripts/*.sh
-./scripts/init-8node.sh
 ```
 
-このスクリプトでは以下を行います。
+### 6.2 初期化
 
-1. 8 ノード分の `simd init`
-2. 各ノードに `validator` キー作成
-3. node1 に `user1` キー作成
-4. node1 の genesis に 8 validator と user1 を追加
-5. 共通 genesis を全ノードへ配布
-6. 8 ノードすべてで `gentx` 生成
-7. node1 に gentx 集約して `collect-gentxs`
-8. 最終 genesis を全ノードへ再配布
-9. `persistent_peers` を 8 ノード分自動設定
-10. `node-addresses.csv` を生成
+```bash
+NUM_NODES=10 ./scripts/init-10node.sh
+```
+
+このスクリプトでは以下を行う。
+
+* 10ノード分の `simd init`
+* 各ノードの validator key 作成
+* node1 の `user1` 作成
+* genesis account 追加
+* gentx 生成
+* gentx 集約
+* final genesis 配布
+* peer 設定
+* `config.toml` / `app.toml` 調整
+* `node-addresses.csv` 出力
 
 ---
 
-## 6. 起動
+## 7. Docker Compose 生成
 
 ```bash
-./scripts/start-8node.sh
+NUM_NODES=10 ./scripts/gen-docker-compose-10.sh
 ```
 
-または直接:
+または、10ノード対応済みの compose を直接利用してもよい。
+
+確認:
 
 ```bash
-sudo docker compose up -d --remove-orphans
+grep -E '^  node[0-9]+:' docker-compose.yml | wc -l
+```
+
+期待値:
+
+```text
+10
 ```
 
 ---
 
-## 7. 全ノード状態確認
+## 8. 起動・停止
+
+### 8.1 起動
 
 ```bash
-./scripts/query-status-all.sh
+./scripts/start-10node.sh
 ```
 
-確認ポイント:
+### 8.2 停止
 
-- `network` がすべて `chain-0`
-- 各ノードの `latest_block_height` が増えている
-- `catching_up: false`
+```bash
+./scripts/stop-10node.sh
+```
 
 ---
 
-## 8. validator 一覧確認
+## 9. 起動確認
 
-node1 の RPC から validator 一覧を確認します。
+### 9.1 全ノード状態確認
+
+```bash
+NUM_NODES=10 ./scripts/query-status-all.sh
+```
+
+期待する状態:
+
+* 全ノードで `network = chain-0`
+* `latest_block_height > 0`
+* 全ノードで同程度の高さ
+* `catching_up = false`
+
+### 9.2 コンテナ数確認
+
+```bash
+sudo docker ps --format '{{.Names}}' | grep '^chain-0-node-' | wc -l
+```
+
+期待値:
+
+```text
+10
+```
+
+---
+
+## 10. validator / 残高確認
+
+### 10.1 validator 一覧
 
 ```bash
 ./scripts/query-validators.sh
 ```
 
-出力項目:
-
-- `address`
-- `voting_power`
-- `proposer_priority`
-
----
-
-## 9. 残高確認
-
-node1 の `validator` と `user1` を確認します。
+### 10.2 残高確認
 
 ```bash
 ./scripts/query-balances.sh
@@ -151,181 +239,309 @@ node1 の `validator` と `user1` を確認します。
 
 ---
 
-## 10. 単発 Tx 実験
+## 11. 単発 Tx 実験
 
-node1 の `validator` から `user1` に `1000stake` を送ります。
-
-```bash
-./scripts/send-bank-tx.sh 1000stake
-```
-
-出力先ディレクトリ指定例:
+### 11.1 実行
 
 ```bash
-./scripts/send-bank-tx.sh 1000stake validator user1 single-run
+./scripts/send-bank-tx.sh 1stake
 ```
+
+### 11.2 期待結果
+
+* `code = 0`
+* `waited_for_inclusion = true`
+* `txhash` が返る
+
+### 11.3 送信内容
+
+既定では
+
+* 送信元: `validator`
+* 送信先: `user1`
+
+で `bank send` を行う。
 
 ---
 
-## 11. Tx inclusion 待機
+## 12. burst Tx 実験
+
+### 12.1 実行例
 
 ```bash
-./scripts/wait-tx.sh <txhash> 60
-```
-
----
-
-## 12. burst load 実験
-
-10 本:
-
-```bash
-./scripts/burst-bank-load.sh 10 1stake burst-10
-```
-
-50 本、0.2 秒間隔:
-
-```bash
-./scripts/burst-bank-load.sh 50 1stake burst-50 0.2
-```
-
-100 本、0.1 秒間隔:
-
-```bash
-./scripts/burst-bank-load.sh 100 1stake burst-100 0.1
-```
-
----
-
-## 13. inclusion 監査
-
-```bash
+./scripts/burst-bank-load.sh 10 1stake burst-10 0.3
 ./scripts/audit-tx-inclusion.sh burst-10/summary.csv burst-10/audit.csv
-```
-
-主な列:
-
-- `height`
-- `tx_time`
-- `local_submit_to_inclusion_secs`
-- `gas_wanted`
-- `gas_used`
-- `tx_code`
-- `codespace`
-
----
-
-## 14. 監査結果の要約
-
-```bash
 ./scripts/summarize-load-result.sh burst-10/audit.csv
 ```
 
+### 12.2 出力
+
+* `burst-10/summary.csv`
+* `burst-10/audit.csv`
+
+### 12.3 注意
+
+以前は sequence 競合により
+同一 `txhash` の重複や
+`submit_code=19` が出ていたため、
+送信スクリプト側で
+Tx inclusion を待つ実装へ修正している。
+
 ---
 
-## 15. block time 抽出
-
-直近 200 block の時刻差を CSV 出力します。
+## 13. block time 観測
 
 ```bash
 ./scripts/export-block-times.sh 200 block-times.csv
 ```
 
-既定では node1 RPC (`37657`) を参照します。別ノードを見るときは:
+取得対象:
 
-```bash
-RPC_PORT=37660 ./scripts/export-block-times.sh 200 node4-block-times.csv
-```
+* height
+* block timestamp
+* 前ブロックとの差分秒数
 
 ---
 
-## 16. 推奨実験フロー
+## 14. gossip protocol の確認
 
-### A. 初期化と起動
+### 14.1 接続数確認
 
 ```bash
-chmod +x scripts/*.sh
-./scripts/init-8node.sh
-./scripts/start-8node.sh
-./scripts/query-status-all.sh
+curl -s http://localhost:37657/net_info | jq '.result.n_peers'
+```
+
+10ノード環境では、node1 が他の 9 ノードと接続していれば
+`"9"` が返る。
+
+### 14.2 peer 一覧
+
+```bash
+curl -s http://localhost:37657/net_info | jq '.result.peers[] | {id: .node_info.id, moniker: .node_info.moniker}'
+```
+
+### 14.3 接続エッジ一覧出力
+
+```bash
+for i in $(seq 1 10); do
+  RPC=$((37656 + i))
+  curl -s "http://localhost:${RPC}/net_info" \
+    | jq -r --arg src "node$i" '.result.peers[] | "\($src),\(.node_info.moniker)"'
+done | sort -u > gossip-edges.csv
+```
+
+### 14.4 解釈
+
+10ノード環境では、実験時点で
+各ノードが他の 9 ノードと接続しており、
+**ほぼ完全グラフ**
+として gossip network が形成されていた。
+
+---
+
+## 15. consensus / gossip の運用観測
+
+node1 のログ例:
+
+```bash
+sudo docker logs --tail 150 chain-0-node-1
+```
+
+確認すべきログ:
+
+* `received proposal`
+* `received complete proposal`
+* `finalizing commit of block`
+* `indexed block events`
+
+これらが連続して出ていれば、
+
+* proposal gossip
+* vote 集約
+* commit
+
+が正常に回っていると判断できる。
+
+---
+
+## 16. Tx gossip の確認
+
+単発 Tx を送信後、node1 ログで
+
+* `num_txs=1`
+
+が出ることを確認する。
+
+```bash
+./scripts/send-bank-tx.sh 1stake
+sudo docker logs --tail 150 chain-0-node-1
+```
+
+これにより、
+
+* Tx が mempool に入った
+* consensus を通って commit された
+
+ことを確認できる。
+
+必要に応じて node5 / node10 でもログを確認し、
+送信ノード以外でも proposal / commit が継続していることを確認する。
+
+---
+
+## 17. consensus-related 設定
+
+本環境では、Osmosis の変更履歴を参考にした
+consensus-related 設定を試験的に反映している。
+
+### 17.1 genesis の block params
+
+* `max_bytes = "5000000"`
+* `max_gas = "300000000"`
+
+### 17.2 `config.toml`
+
+* `timeout_propose = "1.8s"`
+* `timeout_commit = "500ms"`
+
+### 17.3 `app.toml`
+
+* `minimum-gas-prices = "0.03stake"`
+
+### 17.4 注意
+
+`minimum-gas-prices` と送信スクリプトの fee / gas-prices が不整合だと、
+`insufficient fee` で Tx が reject される。
+そのため、送信側も `stake` ベースで揃えること。
+
+---
+
+## 18. 10ノード構成での到達点
+
+本環境では、以下を確認できている。
+
+* 10ノード / 10 validator 構成で block が継続進行
+* gossip network が形成されている
+* proposal gossip / commit が継続している
+* 単発 Tx が受理・commit される
+* `num_txs=1` のブロックを確認できる
+* burst 実験および block time 観測が可能
+
+---
+
+## 19. 30ノード構成との比較メモ
+
+30ノード構成では、
+
+* peer 設定異常
+* その後の timeout の厳しさ
+
+により height 1 commit が安定しなかった。
+
+一方、10ノード構成では
+同系統の consensus-related 設定でも
+安定して block が進行した。
+
+したがって、
+ローカル単機での多ノード実験としては、
+**10ノード構成が現実的な運用条件**
+である。
+
+---
+
+## 20. よく使うコマンドまとめ
+
+### 起動
+
+```bash
+./scripts/start-10node.sh
+```
+
+### 停止
+
+```bash
+./scripts/stop-10node.sh
+```
+
+### 状態確認
+
+```bash
+NUM_NODES=10 ./scripts/query-status-all.sh
+```
+
+### validator
+
+```bash
 ./scripts/query-validators.sh
+```
+
+### 残高
+
+```bash
 ./scripts/query-balances.sh
 ```
 
-### B. 単発 Tx
+### 単発 Tx
 
 ```bash
-./scripts/send-bank-tx.sh 1000stake validator user1 single-run
+./scripts/send-bank-tx.sh 1stake
 ```
 
-返ってきた `txhash` を使って:
+### burst
 
 ```bash
-./scripts/wait-tx.sh <txhash> 60
-```
-
-### C. burst 10
-
-```bash
-./scripts/burst-bank-load.sh 10 1stake burst-10
+./scripts/burst-bank-load.sh 10 1stake burst-10 0.3
 ./scripts/audit-tx-inclusion.sh burst-10/summary.csv burst-10/audit.csv
 ./scripts/summarize-load-result.sh burst-10/audit.csv
 ```
 
-### D. burst 50
+### block time
 
 ```bash
-./scripts/burst-bank-load.sh 50 1stake burst-50 0.2
-./scripts/audit-tx-inclusion.sh burst-50/summary.csv burst-50/audit.csv
-./scripts/summarize-load-result.sh burst-50/audit.csv
+./scripts/export-block-times.sh 200 block-times.csv
 ```
 
-### E. block time 取得
+### gossip 接続一覧
 
 ```bash
-./scripts/export-block-times.sh 500 block-times-500.csv
-```
-
----
-
-## 17. 実験上の注意
-
-### 17.1 これは 8 validator 構成
-
-本パッケージは **8ノード = 8 validator** です。full node 専用ノードは含みません。
-
-### 17.2 submit は node1 基準
-
-`send-bank-tx.sh`, `wait-tx.sh`, `audit-tx-inclusion.sh` は既定で node1 コンテナを使います。
-
-### 17.3 送信方式
-
-`send-bank-tx.sh` は `--broadcast-mode sync` を使います。submit 成功と inclusion は別なので、`wait-tx.sh` または `audit-tx-inclusion.sh` で確認してください。
-
-### 17.4 sequence 競合
-
-短い間隔で大量送信すると sequence 競合が起こりえます。必要なら `interval_sec` を増やしてください。
-
-### 17.5 ローカル資源
-
-8 ノード同時起動なので、単一ノード版より CPU / メモリ消費が増えます。
-
----
-
-## 18. 停止
-
-```bash
-./scripts/stop-8node.sh
-```
-
-完全に消す場合:
-
-```bash
-sudo docker compose down -v --remove-orphans
+for i in $(seq 1 10); do
+  RPC=$((37656 + i))
+  curl -s "http://localhost:${RPC}/net_info" \
+    | jq -r --arg src "node$i" '.result.peers[] | "\($src),\(.node_info.moniker)"'
+done | sort -u > gossip-edges.csv
 ```
 
 ---
 
-## 19. 正直な注意
+## 21. Git 管理時の注意
 
-このパッケージは、`simd` の multi-node 初期化パターンに沿って作っていますが、こちらでは実機 Docker 上で end-to-end 実行検証まではしていません。もし `simd genesis ...` 系サブコマンドや設定ファイルの細部が、あなたの取得したイメージ版と少し違う場合は、初回ログに合わせた微修正が必要になる可能性があります。
+`chains/` 配下や実験ログは巨大になりやすいため、
+通常は Git 管理対象から除外する。
+
+例:
+
+```gitignore
+chains/
+node-addresses.csv
+burst-*/
+*.csv
+*.json
+gossip-edges.csv
+gossip.dot
+gossip.png
+block-times*.csv
+```
+
+---
+
+## 22. 今後の拡張候補
+
+* 1ノード / 8ノード / 10ノード比較
+* timeout パラメータ探索
+* block time 分布比較
+* burst 負荷拡大
+* Tx gossip の多点観測
+* Graphviz による gossip 接続図可視化
+* 30ノード構成再挑戦
+
+
