@@ -517,7 +517,6 @@ block-times*.csv
 
 ### 10ノード版の最短実行手順
 ```bash
-cd ~/Pictures/chain-0/chain-0-10node-package
 chmod +x scripts/*.sh
 
 ./scripts/stop-10node.sh || true
@@ -542,11 +541,31 @@ sudo docker logs --tail 150 chain-0-node-1
 ./scripts/export-block-times.sh 200 block-times.csv
 ```
 
+37657 = node1
+37661 = node5
+37666 = node10
+に確定TXを問い合わせ
+
+./scripts/send-bank-tx.sh 1stake
+TXHASH=""
+
+for port in 37657 37661 37666; do
+  echo "=== RPC $port ==="
+  curl -s "http://localhost:${port}/tx?hash=0x${TXHASH}" | jq '.result.hash, .result.height, .result.tx_result.code'
+done
+
 ### 終了するとき
 ```bash
 ./scripts/stop-10node.sh
 ```
+ディレクトリの compose 管理下コンテナも一度落とす（再新規作成）
+```bash
+sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node-' || true
 
+sudo docker rm -f $(sudo docker ps -aq --filter "name=^/chain-0-node-") 2>/dev/null || true
+
+sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node-' || true
+```
 ---
 
 ## 22. 今後の拡張候補
