@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NUM_NODES="${NUM_NODES:-30}"
+NUM_NODES="${NUM_NODES:-10}"
 
 for i in $(seq 1 "$NUM_NODES"); do
   RPC=$((37656 + i))

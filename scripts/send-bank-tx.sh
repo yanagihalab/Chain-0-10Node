@@ -36,7 +36,9 @@ RAW_JSON=$(sudo docker exec "$CONTAINER" simd tx bank send "$FROM_ADDR" "$TO_ADD
   --node "$NODE" \
   --yes \
   --broadcast-mode sync \
-  --fees "$FEES" \
+  --gas auto \
+  --gas-adjustment 1.5 \
+  --gas-prices 0.03stake \
   -o json)
 
 TXHASH=$(echo "$RAW_JSON" | jq -r '.txhash // empty')

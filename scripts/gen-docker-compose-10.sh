@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT_DIR/docker-compose.yml"
 IMAGE="${IMAGE:-ghcr.io/cosmos/ibc-go-simd:release-v10.4.x}"
-NUM_NODES="${NUM_NODES:-30}"
+NUM_NODES="${NUM_NODES:-10}"
 
 cat > "$OUT" <<YAML
 services:

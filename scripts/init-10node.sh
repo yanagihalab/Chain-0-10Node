@@ -8,7 +8,7 @@ CHAIN_ID="${CHAIN_ID:-chain-0}"
 KEYRING_BACKEND="${KEYRING_BACKEND:-test}"
 DENOM="${DENOM:-stake}"
 MONIKER_PREFIX="${MONIKER_PREFIX:-chain-0-node}"
-NUM_NODES="${NUM_NODES:-30}"
+NUM_NODES="${NUM_NODES:-10}"
 VALIDATOR_TOKENS="${VALIDATOR_TOKENS:-1000000000${DENOM}}"
 USER_TOKENS="${USER_TOKENS:-1000000000${DENOM}}"
 STAKE_TOKENS="${STAKE_TOKENS:-500000000${DENOM}}"
@@ -88,7 +88,7 @@ for i in $(seq 2 "$NUM_NODES"); do
   cp "$NODE1/config/genesis.json" "$CHAINS_DIR/node$i/config/genesis.json"
 done
 
-echo "[7.5/10] Apply Osmosis changelog-based consensus-related settings"
+echo "[7.5/10] Apply consensus-related settings"
 fix_ownership
 for i in $(seq 1 "$NUM_NODES"); do
   node_dir="$CHAINS_DIR/node$i"
@@ -129,12 +129,17 @@ for i in $(seq 1 "$NUM_NODES"); do
   sed -i 's#^timeout_commit = .*#timeout_commit = "500ms"#' "$config" || true
   sed -i 's#^timeout_propose = .*#timeout_propose = "1.8s"#' "$config" || true
   sed -i 's#^index_all_keys = false#index_all_keys = true#' "$config" || true
+  if grep -q '^pex = ' "$config"; then
+    sed -i 's#^pex = .*#pex = false#' "$config"
+  fi
 
-  sed -i 's#^minimum-gas-prices = .*#minimum-gas-prices = "0.03uosmo"#' "$app"
+  sed -i 's#^minimum-gas-prices = .*#minimum-gas-prices = "0.03stake"#' "$app"
   sed -i '0,/^enable = false/s//enable = true/' "$app" || true
   sed -i 's#^address = "tcp://localhost:1317"#address = "tcp://0.0.0.0:1317"#' "$app" || true
   sed -i 's#^address = "localhost:9090"#address = "0.0.0.0:9090"#' "$app" || true
   sed -i 's#^enable = false#enable = true#' "$app" || true
+
+  rm -f "$node_dir/config/addrbook.json"
 done
 
 printf '[9/10] Write node address summary\n'
@@ -154,4 +159,4 @@ fix_ownership
 
 printf '[10/10] Done\n'
 printf 'Initialized %s-node chain data under: %s\n' "$NUM_NODES" "$CHAINS_DIR"
-printf 'Next: ./scripts/start-30node.sh\n'
+printf 'Next: ./scripts/start-10node.sh\n'
