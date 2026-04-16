@@ -14,10 +14,9 @@ OUTDIR="${4:-.}"
 CONTAINER="${CONTAINER:-chain-0-node-1}"
 CHAIN_ID="${CHAIN_ID:-chain-0}"
 NODE="${NODE:-tcp://127.0.0.1:26657}"
+FEES="${FEES:-0stake}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-30}"
 WAIT_INTERVAL="${WAIT_INTERVAL:-0.4}"
-GAS_PRICES="${GAS_PRICES:-0.03stake}"
-GAS_ADJUSTMENT="${GAS_ADJUSTMENT:-1.5}"
 
 mkdir -p "$OUTDIR"
 
@@ -30,7 +29,6 @@ PY
 FROM_ADDR=$(sudo docker exec "$CONTAINER" simd keys show "$FROM_KEY" -a --keyring-backend test --home /root/.simapp)
 TO_ADDR=$(sudo docker exec "$CONTAINER" simd keys show "$TO_KEY" -a --keyring-backend test --home /root/.simapp)
 
-# stderr を捨てて "gas estimate: ..." などの途中表示を抑制する
 RAW_JSON=$(sudo docker exec "$CONTAINER" simd tx bank send "$FROM_ADDR" "$TO_ADDR" "$AMOUNT" \
   --chain-id "$CHAIN_ID" \
   --keyring-backend test \
@@ -39,9 +37,9 @@ RAW_JSON=$(sudo docker exec "$CONTAINER" simd tx bank send "$FROM_ADDR" "$TO_ADD
   --yes \
   --broadcast-mode sync \
   --gas auto \
-  --gas-adjustment "$GAS_ADJUSTMENT" \
-  --gas-prices "$GAS_PRICES" \
-  -o json 2>/dev/null)
+  --gas-adjustment 1.5 \
+  --gas-prices 0.03stake \
+  -o json)
 
 TXHASH=$(echo "$RAW_JSON" | jq -r '.txhash // empty')
 CODE=$(echo "$RAW_JSON" | jq -r '.code // 0')
@@ -50,7 +48,7 @@ RAW_LOG=$(echo "$RAW_JSON" | jq -c '.raw_log // empty')
 BASENAME="tx-${TXHASH:-unknown}"
 printf '%s\n' "$RAW_JSON" > "$OUTDIR/${BASENAME}-submit.json"
 
-# submit 自体が失敗した場合は inclusion 待ちをせず、そのまま要約を返す
+# submit 自体が失敗ならそのまま返す
 if [[ -z "$TXHASH" || "$CODE" != "0" ]]; then
   jq -n \
     --arg local_submit_ts "$LOCAL_SUBMIT_TS" \
@@ -80,6 +78,7 @@ if [[ -z "$TXHASH" || "$CODE" != "0" ]]; then
   exit 0
 fi
 
+# tx inclusion を待つ
 FOUND=0
 START_TS=$(python3 - <<'PY'
 import time
