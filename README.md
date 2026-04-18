@@ -509,6 +509,10 @@ NUM_NODES=10 ./scripts/query-status-all.sh
 ./scripts/audit-tx-inclusion.sh burst-1000-wallets/summary.csv burst-1000-wallets/audit.csv
 ./scripts/summarize-load-result.sh burst-1000-wallets/audit.csv
 
+./scripts/burst-bank-load.sh 3000 1stake burst-3000-wallets 0.0
+./scripts/audit-tx-inclusion.sh burst-3000-wallets/summary.csv burst-3000-wallets/audit.csv
+./scripts/summarize-load-result.sh burst-3000-wallets/audit.csv
+
 ### block time
 
 ```bash

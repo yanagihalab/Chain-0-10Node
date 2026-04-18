@@ -40,7 +40,7 @@ STAKE_TOKENS="${STAKE_TOKENS:-500000000${DENOM}}"
 # burst 実験用 wallet 数
 # 100, 200, 300 ... と段階的に使いたい場合は、
 # 最大想定数をここでまとめて用意してください。
-BURST_WALLET_COUNT="${BURST_WALLET_COUNT:-1000}"
+BURST_WALLET_COUNT="${BURST_WALLET_COUNT:-8000}"
 
 # burst 実験用 wallet 名の接頭辞
 # wallet001, wallet002, ... のような名前になります。
