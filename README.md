@@ -1,9 +1,10 @@
+
 # chain-0 10-node local consensus test environment
 
 ## 1. 概要
 
 本リポジトリは、Cosmos SDK / CometBFT ベースの単一チェーン `chain-0` を  
-**10ノード・10 validator** 構成で Docker 上に構築し、  
+**10 ノード・10 validator** 構成で Docker 上に構築し、  
 ローカル環境で以下を観測するための実験環境である。
 
 - コンセンサス挙動
@@ -57,15 +58,15 @@
 - gRPC: `9489 + node番号`
 - P2P: `36655 + node番号`
 
-例:
-
 #### node1
+
 - RPC: `37657`
 - API: `13717`
 - gRPC: `9490`
 - P2P: `36656`
 
 #### node10
+
 - RPC: `37666`
 - API: `13726`
 - gRPC: `9499`
@@ -96,9 +97,13 @@ chain-0-10node-package/
    ├─ send-bank-tx.sh
    ├─ wait-tx.sh
    ├─ burst-bank-load.sh
+   ├─ burst-bank-load-reuse.sh
+   ├─ burst-bank-load-saturating.sh
    ├─ audit-tx-inclusion.sh
    ├─ summarize-load-result.sh
    ├─ export-block-times.sh
+   ├─ export-tx-raw-timestamps.sh
+   ├─ detect-unparsed-timestamps.sh
    └─ gen-docker-compose-10.sh
 ````
 
@@ -140,7 +145,7 @@ NUM_NODES=10 ./scripts/init-10node.sh
 
 このスクリプトでは以下を行う。
 
-* 10ノード分の `simd init`
+* 10 ノード分の `simd init`
 * 各ノードの validator key 作成
 * node1 の `user1` 作成
 * genesis account 追加
@@ -259,7 +264,7 @@ sudo docker ps --format '{{.Names}}' | grep '^chain-0-node-' | wc -l
 
 ## 12. burst Tx 実験
 
-### 12.1 実行例
+### 12.1 基本実行例
 
 ```bash
 ./scripts/burst-bank-load.sh 10 1stake burst-10 0.3
@@ -276,6 +281,34 @@ sudo docker ps --format '{{.Names}}' | grep '^chain-0-node-' | wc -l
 
 以前は sequence 競合により、同一 `txhash` の重複や `submit_code=19` が出ていたため、
 送信スクリプト側で **Tx inclusion を待つ実装** に修正している。
+
+### 12.4 100 wallet 実験
+
+```bash
+./scripts/burst-bank-load.sh 100 1stake burst-100-wallets 0.0
+./scripts/audit-tx-inclusion.sh burst-100-wallets/summary.csv burst-100-wallets/audit.csv
+./scripts/summarize-load-result.sh burst-100-wallets/audit.csv
+```
+
+### 12.5 10000 件飽和送信実験（3000 wallet, p500）
+
+```bash
+rm -rf burst-10000-wallets-sat-p500
+
+./scripts/burst-bank-load-saturating.sh 10000 1stake burst-10000-wallets-sat-p500 3000 500 wallet user1 0.00
+./scripts/audit-tx-inclusion.sh burst-10000-wallets-sat-p500/summary.csv burst-10000-wallets-sat-p500/audit.csv
+./scripts/summarize-load-result.sh burst-10000-wallets-sat-p500/audit.csv
+```
+
+### 12.6 10000 件再利用実験（3000 wallet, p300）
+
+```bash
+rm -rf burst-10000-wallets-p500
+
+./scripts/burst-bank-load-reuse.sh 10000 1stake burst-10000-wallets-p500 3000 300 0.0 wallet user1 0.0
+./scripts/audit-tx-inclusion.sh burst-10000-wallets-p500/summary.csv burst-10000-wallets-p500/audit.csv
+./scripts/summarize-load-result.sh burst-10000-wallets-p500/audit.csv
+```
 
 ---
 
@@ -301,7 +334,7 @@ sudo docker ps --format '{{.Names}}' | grep '^chain-0-node-' | wc -l
 curl -s http://localhost:37657/net_info | jq '.result.n_peers'
 ```
 
-10ノード環境では、node1 が他の 9 ノードと接続していれば `"9"` が返る。
+10 ノード環境では、node1 が他の 9 ノードと接続していれば `"9"` が返る。
 
 ### 14.2 peer 一覧
 
@@ -406,7 +439,7 @@ sudo docker logs --tail 150 chain-0-node-1
 
 本環境では以下を確認できている。
 
-* 10ノード / 10 validator 構成で block が継続進行
+* 10 ノード / 10 validator 構成で block が継続進行
 * gossip network が形成されている
 * proposal gossip / commit が継続している
 * 単発 Tx が受理・commit される
@@ -417,17 +450,17 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ## 19. 30ノード構成との比較メモ
 
-30ノード構成では、
+30 ノード構成では、
 
 * peer 設定異常
 * その後の timeout の厳しさ
 
 により、height 1 commit が安定しなかった。
 
-一方、10ノード構成では同系統の consensus-related 設定でも安定して block が進行した。
+一方、10 ノード構成では同系統の consensus-related 設定でも安定して block が進行した。
 
 したがって、ローカル単機での多ノード実験としては、
-**10ノード構成が現実的な運用条件** である。
+**10 ノード構成が現実的な運用条件**である。
 
 ---
 
@@ -477,42 +510,6 @@ NUM_NODES=10 ./scripts/query-status-all.sh
 ./scripts/summarize-load-result.sh burst-10/audit.csv
 ```
 
-### burstV1
-100 wallet:
-
-./scripts/burst-bank-load.sh 100 1stake burst-100-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-100-wallets/summary.csv burst-100-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-100-wallets/audit.csv
-
-200 wallet:
-
-./scripts/burst-bank-load.sh 200 1stake burst-200-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-200-wallets/summary.csv burst-200-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-200-wallets/audit.csv
-
-300 wallet:
-
-./scripts/burst-bank-load.sh 300 1stake burst-300-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-300-wallets/summary.csv burst-300-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-300-wallets/audit.csv
-
-./scripts/burst-bank-load.sh 500 1stake burst-500-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-500-wallets/summary.csv burst-500-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-500-wallets/audit.csv
-
-./scripts/burst-bank-load.sh 800 1stake burst-800-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-800-wallets/summary.csv burst-800-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-800-wallets/audit.csv
-
-
-./scripts/burst-bank-load.sh 1000 1stake burst-1000-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-1000-wallets/summary.csv burst-1000-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-1000-wallets/audit.csv
-
-./scripts/burst-bank-load.sh 3000 1stake burst-3000-wallets 0.0
-./scripts/audit-tx-inclusion.sh burst-3000-wallets/summary.csv burst-3000-wallets/audit.csv
-./scripts/summarize-load-result.sh burst-3000-wallets/audit.csv
-
 ### block time
 
 ```bash
@@ -549,9 +546,12 @@ gossip.png
 block-times*.csv
 ```
 
-## 22.最短コマンド
+---
+
+## 22. 最短コマンド
 
 ### 10ノード版の最短実行手順
+
 ```bash
 chmod +x scripts/*.sh
 
@@ -577,10 +577,12 @@ sudo docker logs --tail 150 chain-0-node-1
 ./scripts/export-block-times.sh 200 block-times.csv
 ```
 
-37657 = node1
-37661 = node5
-37666 = node10
-に確定TXを問い合わせは以下のコマンド
+### node1 / node5 / node10 への確定 Tx 問い合わせ
+
+* `37657` = node1
+* `37661` = node5
+* `37666` = node10
+
 ```bash
 ./scripts/send-bank-tx.sh 1stake
 TXHASH=""
@@ -592,241 +594,62 @@ done
 ```
 
 ### 終了するとき
+
 ```bash
 ./scripts/stop-10node.sh
 ```
-ディレクトリの compose 管理下コンテナも一度落とす（再新規作成）
+
+### compose 管理下コンテナを完全に落として再新規作成したい場合
+
 ```bash
 sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node-' || true
 sudo docker rm -f $(sudo docker ps -aq --filter "name=^/chain-0-node-") 2>/dev/null || true
 sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node-' || true
 ```
+
 ---
 
-Config.toml
-**あなたの 10 ノード環境で `init-10node.sh` が実際に触っている `config.toml` 項目だけ**を抜き出して、**公式の初期値 → 現在値**の対応にする。
+## 23. `config.toml` 初期値 → 現在値 対応表（10ノード環境）
 
 前提:
 
 * **初期値** = CometBFT の `config.toml` 公式ドキュメントに載っている default 値
-* **現在値** = あなたの `init-10node.sh` で 10 ノード環境向けに上書きしている値
-
-CometBFT 公式 docs では、`config.toml` は `cometbft init` により **default 値入りで生成**されると説明されています。 ([docs.cometbft.com][1])
-
----
-
-## 対応表
-
-### 1. RPC 待受アドレス
-
-* **項目**: `laddr`
-* **初期値**: `tcp://127.0.0.1:26657` ([docs.cometbft.com][1])
-* **現在値**: `tcp://0.0.0.0:26657`
-
-意味:
-
-* 初期状態では localhost のみ
-* 今は外部からも RPC にアクセスできるように全インターフェース待受に変更
-
----
-
-### 2. pprof 待受アドレス
-
-* **項目**: `pprof_laddr`
-* **初期値**: `""`（無効） ([docs.cometbft.com][1])
-* **現在値**: `0.0.0.0:6060`
-
-意味:
-
-* 初期状態では profiling 無効
-* 今は profiling を外部から見られる形に変更
-
----
-
-### 3. CORS 許可オリジン
-
-* **項目**: `cors_allowed_origins`
-* **初期値**: `[]` ([docs.cometbft.com][1])
-* **現在値**: `["*"]`
-
-意味:
-
-* 初期状態では CORS 無効
-* 今は任意 origin を許可
-
----
-
-### 4. ノード名
-
-* **項目**: `moniker`
-* **初期値**: `"my.host.name"`（docs の default 例） ([docs.cometbft.com][1])
-* **現在値**: `chain-0-node-<n>`
-
-意味:
-
-* 初期状態では一般的なホスト名
-* 今は各ノードを識別しやすい名前に変更
-
----
-
-### 5. 永続 peer
-
-* **項目**: `persistent_peers`
-* **初期値**: `""` ([docs.cometbft.com][1])
-* **現在値**: `node1`〜`node10` の node ID を全列挙した接続一覧
-
-意味:
-
-* 初期状態では永続 peer なし
-* 今は 10 ノード全体で固定接続ネットワークを形成
-
-補足:
-
-* CometBFT では `persistent_peers` は通常の outbound 上限に数えない扱いです。 ([docs.cometbft.com][1])
-
----
-
-### 6. アドレス帳の厳格性
-
-* **項目**: `addr_book_strict`
-* **初期値**: `true` ([docs.cometbft.com][1])
-* **現在値**: `false`
-
-意味:
-
-* 初期状態では private network のアドレスを厳しく扱う
-* 今はローカル実験用に private network アドレスを許可
-
----
-
-### 7. 同一 IP の重複許可
-
-* **項目**: `allow_duplicate_ip`
-* **初期値**: `false` ([docs.cometbft.com][1])
-* **現在値**: `true`
-
-意味:
-
-* 初期状態では同一 IP からの複数接続を防ぐ
-* 今は Docker ローカル実験のため重複 IP 接続を許可
-
----
-
-### 8. PEX（peer exchange）
-
-* **項目**: `pex`
-* **初期値**: `true` ([docs.cometbft.com][1])
-* **現在値**: `false`
-
-意味:
-
-* 初期状態では peer discovery 有効
-* 今は `persistent_peers` 固定運用にして、余計な peer 探索を抑制
-
----
-
-### 9. `timeout_propose`
-
-* **項目**: `timeout_propose`
-* **初期値**: `"3s"` ([docs.cometbft.com][1])
-* **現在値**: `"1.8s"`
-
-意味:
-
-* 初期状態より短縮して、Osmosis 由来設定寄りに詰めている
-
----
-
-### 10. `timeout_commit`
-
-* **項目**: `timeout_commit`
-* **初期値**: `"1s"` ([docs.cometbft.com][1])
-* **現在値**: `"500ms"`
-
-意味:
-
-* 初期状態より短縮して、commit 間隔を攻めている
-
----
-
-## 触っている項目だけを一行でまとめると
-
-* `laddr`: `127.0.0.1:26657` → `0.0.0.0:26657`
-* `pprof_laddr`: `""` → `0.0.0.0:6060`
-* `cors_allowed_origins`: `[]` → `["*"]`
-* `moniker`: `"my.host.name"` → `chain-0-node-N`
-* `persistent_peers`: `""` → 10ノード全列挙
-* `addr_book_strict`: `true` → `false`
-* `allow_duplicate_ip`: `false` → `true`
-* `pex`: `true` → `false`
-* `timeout_propose`: `"3s"` → `"1.8s"`
-* `timeout_commit`: `"1s"` → `"500ms"`
-
----
-
-## 補足
-
-あなたのスクリプトには `index_all_keys = false -> true` という置換もありましたが、**CometBFT の公式 `config.toml` リファレンスではそのキーを確認できませんでした**。
-なので、上の対応表では **公式 default を確認できた項目だけ**に絞っています。
-
-必要なら次に、
-**この対応表を README にそのまま貼れる節（「初期値と現在値の差分」）として整形した版**を作れます。
-
-[1]: https://docs.cometbft.com/main/references/config/config.toml "CometBFT Documentation - Config.toml - main"
-
-
-## `config.toml` 初期値 → 現在値 対応表（10ノード環境）
-
-| 項目 | 初期値 | 現在値 | 役割 / 変更理由 |
-|---|---|---|---|
-| `laddr` | `tcp://127.0.0.1:26657` | `tcp://0.0.0.0:26657` | RPC を localhost 限定から全インターフェース待受へ変更 |
-| `pprof_laddr` | `""` | `0.0.0.0:6060` | profiling を有効化し、外部から確認可能に変更 |
-| `cors_allowed_origins` | `[]` | `["*"]` | CORS を全許可に変更 |
-| `moniker` | `my.host.name` | `chain-0-node-N` | ノード識別のため明示的な名前に変更 |
-| `persistent_peers` | `""` | `node1`〜`node10` の全 peer 一覧 | 10ノード間で固定接続ネットワークを形成 |
-| `addr_book_strict` | `true` | `false` | ローカル実験環境で private network アドレスを許可 |
-| `allow_duplicate_ip` | `false` | `true` | Docker ローカル環境で同一IP上の複数ノード接続を許可 |
-| `pex` | `true` | `false` | peer exchange を止め、固定 peer 構成に限定 |
-| `timeout_propose` | `3s` | `1.8s` | proposal timeout を短縮し、Osmosis寄り設定へ調整 |
-| `timeout_commit` | `1s` | `500ms` | commit timeout を短縮し、Osmosis寄り設定へ調整 |
+* **現在値** = `init-10node.sh` で 10 ノード環境向けに上書きしている値
+
+| 項目                     | 初期値                     | 現在値                         | 役割 / 変更理由                             |
+| ---------------------- | ----------------------- | --------------------------- | ------------------------------------- |
+| `laddr`                | `tcp://127.0.0.1:26657` | `tcp://0.0.0.0:26657`       | RPC を localhost 限定から全インターフェース待受へ変更    |
+| `pprof_laddr`          | `""`                    | `0.0.0.0:6060`              | profiling を有効化し、外部から確認可能に変更           |
+| `cors_allowed_origins` | `[]`                    | `["*"]`                     | CORS を全許可に変更                          |
+| `moniker`              | `my.host.name`          | `chain-0-node-N`            | ノード識別のため明示的な名前に変更                     |
+| `persistent_peers`     | `""`                    | `node1`〜`node10` の全 peer 一覧 | 10 ノード間で固定接続ネットワークを形成                 |
+| `addr_book_strict`     | `true`                  | `false`                     | ローカル実験環境で private network アドレスを許可     |
+| `allow_duplicate_ip`   | `false`                 | `true`                      | Docker ローカル環境で同一 IP 上の複数ノード接続を許可      |
+| `pex`                  | `true`                  | `false`                     | peer exchange を止め、固定 peer 構成に限定       |
+| `timeout_propose`      | `3s`                    | `1.8s`                      | proposal timeout を短縮し、Osmosis 寄り設定へ調整 |
+| `timeout_commit`       | `1s`                    | `500ms`                     | commit timeout を短縮し、Osmosis 寄り設定へ調整   |
 
 ### 補足
-- `persistent_peers` は 10ノード環境では各ノードを相互接続するために全列挙している。
-- `pex = false` のため、peer discovery に依存せず、固定接続で動作させている。
-- `timeout_propose` と `timeout_commit` は、初期値より短く設定しているため、ローカル多ノード環境での安定性確認が重要になる。
-- 上記は **`init-10node.sh` で実際に書き換えている `config.toml` 項目のみ** を対象としている。
 
-## persistent_peersについて
-**`persistent_peers` を全列挙しない**ようにすれば、10 ノードを相互完全接続にしない構成にできます。CometBFT では、`persistent_peers` は常時接続したい相手の一覧で、`pex` は peer discovery を有効化する設定です。`max_num_outbound_peers` と `max_num_inbound_peers` で通常の接続上限も持てます。([docs.cometbft.com](https://docs.cometbft.com/main/references/config/config.toml))
+* `persistent_peers` は 10 ノード環境では各ノードを相互接続するために全列挙している。
+* `pex = false` のため、peer discovery に依存せず、固定接続で動作させている。
+* `timeout_propose` と `timeout_commit` は、初期値より短く設定しているため、ローカル多ノード環境での安定性確認が重要になる。
+* 上記は **`init-10node.sh` で実際に書き換えている `config.toml` 項目のみ** を対象としている。
 
-今は各ノードで `persistent_peers` に **node1〜node10 の全ノード**を入れているので、ほぼ完全接続になります。
-これをやめて、各ノードが **2〜3 ノードだけ**を持つ形にします。
+---
 
-### 例1: リング接続
+## 24. `persistent_peers` について
 
-各ノードが「前後 2 ノード」だけを persistent peer にします。
+`persistent_peers` を全列挙しないようにすれば、10 ノードを相互完全接続にしない構成にもできる。
+CometBFT では、`persistent_peers` は常時接続したい相手の一覧であり、`pex` は peer discovery を有効化する設定である。
+また、`max_num_outbound_peers` と `max_num_inbound_peers` により通常の接続上限を持てる。
 
-* node1 → node2, node10
-* node2 → node1, node3
-* ...
-* node10 → node9, node1
+現在は各ノードで `persistent_peers` に **node1〜node10 の全ノード**を入れているため、ほぼ完全接続となっている。
+これをやめて、各ノードごとに別の `persistent_peers` を設定すれば、リング接続やスター接続なども実現できる。
 
-この場合、完全接続ではなく **輪っか状の gossip network** になります。
+現在の生成ロジック:
 
-### 例2: スター接続
-
-node1 をハブにして、
-
-* node2〜10 → node1
-* node1 → node2,3,4 など一部だけ
-
-のようにすると、中心ノード依存の構造になります。
-
-## どこを変えるか
-
-`init-10node.sh` のこの部分です。
-
-```bash id="wwh7aw"
+```bash
 peer_list=""
 for i in $(seq 1 "$NUM_NODES"); do
   node_dir="$CHAINS_DIR/node$i"
@@ -838,97 +661,114 @@ for i in $(seq 1 "$NUM_NODES"); do
 done
 ```
 
-
-この作り方だと **全ノード共通の peer_list** ができるので、完全接続になります。
-**ノードごとに別の `persistent_peers`** を作る方式となる．
+この作り方だと **全ノード共通の peer_list** ができるため、完全接続に近い構成となる。
+ノードごとに別の `persistent_peers` を作る方式に変更すれば、接続構造を意図的に制御できる。
 
 ---
 
-<!-- ## リング接続にする差し替え例
+## 25. 1000 wallet 再利用版の大規模 burst 実験
 
-`[8/10] Compute persistent peers and node-specific settings` の前あたりで、まず node ID を配列化します。
+本環境では、初期作成 wallet 数を **1000** に抑えたうえで、それらを再利用しながら **合計 10000 件** の Tx を送信する実験を行える。
+この実験では、wallet をラウンド分割ではなく、**空いた wallet から順に再利用して送信を継続する飽和送信方式**を用いる。
 
-```bash id="5x3jiq"
-declare -a NODE_IDS
-for i in $(seq 1 "$NUM_NODES"); do
-  node_dir="$CHAINS_DIR/node$i"
-  NODE_IDS[$i]=$(run_in_node "$node_dir" "simd tendermint show-node-id --home /root/.simapp" | tr -d '\r')
-done
+### 目的
+
+* 初期 wallet 数を抑えた条件での大規模 burst 実験
+* wallet 再利用時の安定性確認
+* `max_parallel` 制御下での送信継続性確認
+* mempool から block への取り込み遅延の観測
+* 1000 wallet 再利用時の throughput / latency 傾向確認
+
+### 前提
+
+この実験では、`init-10node.sh` 実行時に **1000 wallet** を作成しておく。
+
+```bash
+./scripts/stop-10node.sh || true
+rm -rf chains node-addresses.csv
+mkdir -p chains
+
+NUM_NODES=10 BURST_WALLET_COUNT=1000 ./scripts/init-10node.sh
+NUM_NODES=10 ./scripts/gen-docker-compose-10.sh
+./scripts/start-10node.sh
 ```
 
-その後、各ノードごとに前後 1 ノードだけを peer にします。
+### 実行コマンド
 
-```bash id="m26nzu"
-for i in $(seq 1 "$NUM_NODES"); do
-  node_dir="$CHAINS_DIR/node$i"
-  config="$node_dir/config/config.toml"
+```bash
+rm -rf burst-10000-wallets-sat-p500-w1000
 
-  prev=$((i-1))
-  next=$((i+1))
-  if [[ $prev -lt 1 ]]; then prev=$NUM_NODES; fi
-  if [[ $next -gt $NUM_NODES ]]; then next=1; fi
-
-  peer_list="${NODE_IDS[$prev]}@node${prev}:26656,${NODE_IDS[$next]}@node${next}:26656"
-
-  sed -i "s#^persistent_peers = .*#persistent_peers = \"$peer_list\"#" "$config"
-done
+WAIT_TIMEOUT=180 ./scripts/burst-bank-load-saturating.sh 10000 1stake burst-10000-wallets-sat-p500-w1000 1000 500 wallet user1 0.05
+./scripts/audit-tx-inclusion.sh burst-10000-wallets-sat-p500-w1000/summary.csv burst-10000-wallets-sat-p500-w1000/audit.csv
+./scripts/summarize-load-result.sh burst-10000-wallets-sat-p500-w1000/audit.csv
 ```
 
-これで **各ノードは 2 本だけ** persistent peer を持つようになります。
+### 引数の意味
 
----
+| 位置 |                                    値 | 意味               |
+| -- | -----------------------------------: | ---------------- |
+| 1  |                              `10000` | 総送信数             |
+| 2  |                             `1stake` | 1 回あたり送金額        |
+| 3  | `burst-10000-wallets-sat-p500-w1000` | 出力ディレクトリ         |
+| 4  |                               `1000` | 利用する wallet 数    |
+| 5  |                                `500` | 最大並列数            |
+| 6  |                             `wallet` | wallet 名プレフィックス  |
+| 7  |                              `user1` | 送信先 key 名        |
+| 8  |                               `0.05` | 送信ループの polling 秒 |
 
-## あわせて設定した方がよい項目
+### 動作方式
 
-完全接続を避けたいなら、これも重要です。
+この方式では、`wallet001` ～ `wallet1000` を固定集合として扱い、
 
-```toml id="8c4hbp"
-pex = false
-max_num_outbound_peers = 2
-max_num_inbound_peers = 10
+* 空いている wallet があれば次の送信に使う
+* 送信中の wallet は再利用しない
+* 送信完了後に wallet を再び利用可能に戻す
+* これを繰り返して合計 10000 件に到達するまで送信を継続する
+
+つまり、**ラウンド単位で待つのではなく、空いた wallet から順に継続投入する飽和送信**である。
+
+### 特徴
+
+* 1000 wallet を再利用しながら 10000 件送信可能
+* `max_parallel=500` により、送信側 PC の負荷を抑えつつ高並列を維持
+* wallet 数より少ない並列数を使うことで、同一 wallet の競合を避けやすい
+* `WAIT_TIMEOUT=180` により、後半の Tx も `query tx` で追跡しやすい
+
+### 出力
+
+* `burst-10000-wallets-sat-p500-w1000/summary.csv`
+* `burst-10000-wallets-sat-p500-w1000/audit.csv`
+* `burst-10000-wallets-sat-p500-w1000/tx_raw/`
+
+### 補助確認
+
+`tx_raw` に保存された `*-tx.json` から timestamp 傾向を確認できる。
+
+```bash
+./scripts/export-tx-raw-timestamps.sh burst-10000-wallets-sat-p500-w1000/tx_raw burst-10000-wallets-sat-p500-w1000/tx_raw_timestamps.csv
+./scripts/detect-unparsed-timestamps.sh burst-10000-wallets-sat-p500-w1000/tx_raw_timestamps.csv timestamp
 ```
 
-* `pex = false`
-  追加 peer を勝手に探しに行かない
-* `max_num_outbound_peers = 2`
-  自分から張る接続を 2 本に制限
-* `max_num_inbound_peers`
-  受ける側の上限
+### 注意
 
-ただし、`persistent_peers` は通常の outbound 上限カウントとは別扱いなので、**本当に構造を制限したいなら `persistent_peers` 自体を少数にすることが本体**です。([docs.cometbft.com](https://docs.cometbft.com/main/references/config/config.toml))
+* 1000 wallet 再利用方式では、3000 wallet 利用時よりも wallet の再利用頻度が高くなる
+* そのため、`WAIT_TIMEOUT` は長めに設定する方が安定しやすい
+* `max_parallel=500` は比較的攻めた設定であり、必要なら 300 程度に落として比較するとよい
+* メモリ増大により処理落ちが発生する可能であり
 
----
+### 比較用の実行例
 
-## 実験的におすすめの構造
+```bash
+rm -rf burst-10000-wallets-sat-p300-w1000
 
-10 ノードなら、まずはこれが分かりやすいです。
-
-### リング型
-
-* 各ノードが 2 接続
-* gossip がどのくらい回るか見やすい
-
-### 2-hop リング型
-
-* 各ノードが 4 接続
-* 例: 前後1つずつ + 2つ先ずつ
-
-これは完全接続より軽く、でもリングより安定しやすいです。
+WAIT_TIMEOUT=180 ./scripts/burst-bank-load-saturating.sh 10000 1stake burst-10000-wallets-sat-p300-w1000 1000 300 wallet user1 0.05
+./scripts/audit-tx-inclusion.sh burst-10000-wallets-sat-p300-w1000/summary.csv burst-10000-wallets-sat-p300-w1000/audit.csv
+./scripts/summarize-load-result.sh burst-10000-wallets-sat-p300-w1000/audit.csv
+```
 
 ---
 
-## 結論
-
-**相互接続させないように設定することは可能**です。
-やることは次の 2 つです。
-
-1. `persistent_peers` を全列挙しない
-2. 必要なら `pex = false` と `max_num_outbound_peers` を併用する
-
-必要なら次に、**あなたの `init-10node.sh` を「リング接続版」にした完成差し替えコード**をそのまま書きます。 -->
-
-
-## 22. 今後の拡張候補
+## 26. 今後の拡張候補
 
 * 1ノード / 8ノード / 10ノード比較
 * timeout パラメータ探索
