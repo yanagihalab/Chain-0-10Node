@@ -1,4 +1,7 @@
+以下、**校正済みの README 全文**です。
+主に、Markdown の崩れ、見出し番号の不整合、編集メモの混入、表現のゆれを修正しています。
 
+````markdown
 # chain-0 10-node local consensus test environment
 
 ## 1. 概要
@@ -104,6 +107,7 @@ chain-0-10node-package/
    ├─ export-block-times.sh
    ├─ export-tx-raw-timestamps.sh
    ├─ detect-unparsed-timestamps.sh
+   ├─ monitor-mempool.sh
    └─ gen-docker-compose-10.sh
 ````
 
@@ -148,7 +152,7 @@ NUM_NODES=10 ./scripts/init-10node.sh
 * 10 ノード分の `simd init`
 * 各ノードの validator key 作成
 * node1 の `user1` 作成
-* genesis account 追加
+* genesis account の追加
 * gentx 生成
 * gentx 集約
 * final genesis 配布
@@ -326,9 +330,141 @@ rm -rf burst-10000-wallets-p500
 
 ---
 
-## 14. gossip protocol の確認
+## 14. mempool 観測
 
-### 14.1 接続数確認
+本環境では、CometBFT RPC の `num_unconfirmed_txs` を定期的に取得することで、
+mempool 内に滞留している未確定 Tx 数の推移を観測できる。
+
+この観測は、burst 実験中に以下を確認するために有用である。
+
+* 未確定 Tx がどの程度積み上がるか
+* block 生成に伴って mempool がどのように減少するか
+* 送信終了後に mempool が空になるまでの時間
+
+### 14.1 使用スクリプト
+
+`monitor-mempool.sh`
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+RPC="${1:-http://127.0.0.1:37657}"
+INTERVAL="${2:-1}"
+OUT_CSV="${3:-mempool_watch.csv}"
+
+if [[ ! -f "$OUT_CSV" ]]; then
+  echo "timestamp,n_txs,total" > "$OUT_CSV"
+fi
+
+while true; do
+  TS="$(date '+%Y-%m-%d %H:%M:%S')"
+
+  RESP="$(curl -s "${RPC}/num_unconfirmed_txs")"
+  COUNT="$(echo "$RESP" | jq -r '.result.n_txs // "NA"')"
+  TOTAL="$(echo "$RESP" | jq -r '.result.total // "NA"')"
+
+  echo "${TS} n_txs=${COUNT} total=${TOTAL}"
+  echo "${TS},${COUNT},${TOTAL}" >> "$OUT_CSV"
+
+  sleep "$INTERVAL"
+done
+```
+
+### 14.2 引数
+
+```bash
+./scripts/monitor-mempool.sh [rpc] [interval_sec] [out_csv]
+```
+
+| 位置 | 既定値                      | 意味               |
+| -- | ------------------------ | ---------------- |
+| 1  | `http://127.0.0.1:37657` | 監視対象 RPC エンドポイント |
+| 2  | `1`                      | 取得間隔（秒）          |
+| 3  | `mempool_watch.csv`      | 出力 CSV ファイル名     |
+
+### 14.3 実行例
+
+#### node1 の mempool を 1 秒ごとに監視
+
+```bash
+./scripts/monitor-mempool.sh http://127.0.0.1:37657 1 mempool_watch.csv
+```
+
+#### burst 実験用ディレクトリへ保存
+
+```bash
+./scripts/monitor-mempool.sh http://127.0.0.1:37657 1 burst-1000-wallets/mempool_watch.csv
+```
+
+#### 0.2 秒ごとに高頻度取得
+
+```bash
+./scripts/monitor-mempool.sh http://127.0.0.1:37657 0.2 burst-3000-wallets/mempool_watch.csv
+```
+
+### 14.4 標準出力の例
+
+```text
+2026-04-19 12:00:00 n_txs=0 total=0
+2026-04-19 12:00:01 n_txs=124 total=124
+2026-04-19 12:00:02 n_txs=98 total=222
+```
+
+### 14.5 CSV の内容
+
+出力 CSV は次の形式を持つ。
+
+```csv
+timestamp,n_txs,total
+2026-04-19 12:00:00,0,0
+2026-04-19 12:00:01,124,124
+2026-04-19 12:00:02,98,222
+```
+
+各列の意味は以下のとおり。
+
+* `timestamp`
+  取得時刻
+* `n_txs`
+  その時点の mempool 内未確定 Tx 数
+* `total`
+  RPC が返す累積件数
+
+### 14.6 用途
+
+この観測結果は、以下の確認に利用できる。
+
+* burst 送信中に未確定 Tx が何件まで増えるか
+* block 生成により mempool がどの速度で減少するか
+* 送信終了後、mempool が空になるまでの時間
+* 並列数や送信間隔の違いによる mempool 滞留傾向の比較
+
+### 14.7 burst 実験と併用する例
+
+```bash
+./scripts/monitor-mempool.sh http://127.0.0.1:37657 1 burst-3000-wallets/mempool_watch.csv &
+MONITOR_PID=$!
+
+./scripts/burst-bank-load.sh 3000 1stake burst-3000-wallets 0.0 wallet user1 100
+./scripts/audit-tx-inclusion.sh burst-3000-wallets/summary.csv burst-3000-wallets/audit.csv
+./scripts/summarize-load-result.sh burst-3000-wallets/audit.csv
+
+kill "$MONITOR_PID"
+```
+
+### 14.8 解釈上の注意
+
+* `n_txs` は取得時点の mempool 内件数であり、確定済み Tx は含まれない
+* burst 条件によっては、一時的に急増した後、block 生成に伴い段階的に減少する
+* `total` は単純な mempool 残数ではなく、RPC が返す累積値として扱うため、主に参考値として用いる
+* 比較実験では、同じ `INTERVAL` を用いて観測条件を揃えることが望ましい
+
+---
+
+## 15. gossip protocol の確認
+
+### 15.1 接続数確認
 
 ```bash
 curl -s http://localhost:37657/net_info | jq '.result.n_peers'
@@ -336,13 +472,13 @@ curl -s http://localhost:37657/net_info | jq '.result.n_peers'
 
 10 ノード環境では、node1 が他の 9 ノードと接続していれば `"9"` が返る。
 
-### 14.2 peer 一覧
+### 15.2 peer 一覧
 
 ```bash
 curl -s http://localhost:37657/net_info | jq '.result.peers[] | {id: .node_info.id, moniker: .node_info.moniker}'
 ```
 
-### 14.3 接続エッジ一覧出力
+### 15.3 接続エッジ一覧出力
 
 ```bash
 for i in $(seq 1 10); do
@@ -352,14 +488,14 @@ for i in $(seq 1 10); do
 done | sort -u > gossip-edges.csv
 ```
 
-### 14.4 解釈
+### 15.4 解釈
 
 実験時点では、各ノードが他の 9 ノードと接続しており、
 **ほぼ完全グラフ** として gossip network が形成されていた。
 
 ---
 
-## 15. consensus / gossip の運用観測
+## 16. consensus / gossip の運用観測
 
 node1 のログ例:
 
@@ -384,7 +520,7 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ---
 
-## 16. Tx gossip の確認
+## 17. Tx gossip の確認
 
 単発 Tx 送信後、node1 のログで
 
@@ -409,25 +545,25 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ---
 
-## 17. consensus-related 設定
+## 18. consensus-related 設定
 
 本環境では、Osmosis の変更履歴を参考にした consensus-related 設定を試験的に反映している。
 
-### 17.1 genesis の block params
+### 18.1 genesis の block params
 
 * `max_bytes = "5000000"`
 * `max_gas = "300000000"`
 
-### 17.2 `config.toml`
+### 18.2 `config.toml`
 
 * `timeout_propose = "1.8s"`
 * `timeout_commit = "500ms"`
 
-### 17.3 `app.toml`
+### 18.3 `app.toml`
 
 * `minimum-gas-prices = "0.03stake"`
 
-### 17.4 注意
+### 18.4 注意
 
 `minimum-gas-prices` と送信スクリプトの fee / gas-prices が不整合だと
 `insufficient fee` で Tx が reject される。
@@ -435,7 +571,7 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ---
 
-## 18. 10ノード構成での到達点
+## 19. 10ノード構成での到達点
 
 本環境では以下を確認できている。
 
@@ -448,7 +584,7 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ---
 
-## 19. 30ノード構成との比較メモ
+## 20. 30ノード構成との比較メモ
 
 30 ノード構成では、
 
@@ -464,7 +600,7 @@ sudo docker logs --tail 150 chain-0-node-1
 
 ---
 
-## 20. よく使うコマンドまとめ
+## 21. よく使うコマンドまとめ
 
 ### 起動
 
@@ -528,7 +664,7 @@ done | sort -u > gossip-edges.csv
 
 ---
 
-## 21. Git 管理時の注意
+## 22. Git 管理時の注意
 
 `chains/` 配下や実験ログは巨大になりやすいため、通常は Git 管理対象から除外する。
 
@@ -548,7 +684,7 @@ block-times*.csv
 
 ---
 
-## 22. 最短コマンド
+## 23. 最短コマンド
 
 ### 10ノード版の最短実行手順
 
@@ -609,7 +745,7 @@ sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node
 
 ---
 
-## 23. `config.toml` 初期値 → 現在値 対応表（10ノード環境）
+## 24. `config.toml` 初期値 → 現在値 対応表（10ノード環境）
 
 前提:
 
@@ -638,7 +774,7 @@ sudo docker ps -a --format 'table {{.Names}}\t{{.Status}}' | grep '^chain-0-node
 
 ---
 
-## 24. `persistent_peers` について
+## 25. `persistent_peers` について
 
 `persistent_peers` を全列挙しないようにすれば、10 ノードを相互完全接続にしない構成にもできる。
 CometBFT では、`persistent_peers` は常時接続したい相手の一覧であり、`pex` は peer discovery を有効化する設定である。
@@ -666,7 +802,7 @@ done
 
 ---
 
-## 25. 1000 wallet 再利用版の大規模 burst 実験
+## 26. 1000 wallet 再利用版の大規模 burst 実験
 
 本環境では、初期作成 wallet 数を **1000** に抑えたうえで、それらを再利用しながら **合計 10000 件** の Tx を送信する実験を行える。
 この実験では、wallet をラウンド分割ではなく、**空いた wallet から順に再利用して送信を継続する飽和送信方式**を用いる。
@@ -754,7 +890,7 @@ WAIT_TIMEOUT=180 ./scripts/burst-bank-load-saturating.sh 10000 1stake burst-1000
 * 1000 wallet 再利用方式では、3000 wallet 利用時よりも wallet の再利用頻度が高くなる
 * そのため、`WAIT_TIMEOUT` は長めに設定する方が安定しやすい
 * `max_parallel=500` は比較的攻めた設定であり、必要なら 300 程度に落として比較するとよい
-* メモリ増大により処理落ちが発生する可能であり
+* メモリ使用量の増大により、処理遅延や処理落ちが発生する可能性がある
 
 ### 比較用の実行例
 
@@ -768,7 +904,7 @@ WAIT_TIMEOUT=180 ./scripts/burst-bank-load-saturating.sh 10000 1stake burst-1000
 
 ---
 
-## 26. 今後の拡張候補
+## 27. 今後の拡張候補
 
 * 1ノード / 8ノード / 10ノード比較
 * timeout パラメータ探索
@@ -777,4 +913,3 @@ WAIT_TIMEOUT=180 ./scripts/burst-bank-load-saturating.sh 10000 1stake burst-1000
 * Tx gossip の多点観測
 * Graphviz による gossip 接続図可視化
 * 30ノード構成再挑戦
-
